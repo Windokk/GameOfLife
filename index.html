@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta lang="fr">
+	<style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { border: 1px solid black; margin-top: 10px;}
+        button { 
+            margin: 5px; 
+            padding: 10px; 
+            font-size: 16px; 
+            border-radius: 5px; 
+            border: 0;
+            background-color: rgb(172, 172, 172);
+        }
+        button:hover{
+            background-color: rgb(219, 219, 219);
+        }
+        .start{
+            background-color: rgb(126, 189, 120);
+        }
+        .start:hover{
+            background-color: rgb(154, 227, 147);
+        }
+        .stop{
+            background-color: rgb(189, 120, 120);
+        }
+        .stop:hover{
+            background-color: rgb(227, 143, 143);
+        }
+
+    </style>
+</head>
+<body>
+	<h1>Jeu de la Vie de Conway</h1>
+	<canvas id="gameCanvas"></canvas>
+	<br>
+	<button class="start" onclick="startGame()">Démarrer</button>
+	<button class="stop" onclick="stopGame()">Arrêter</button>
+	<button onclick="randomizeGrid()">Aléatoire</button>
+	<button onclick="clearGrid()">Réinitialiser</button>
+	<br><br>
+	<label id="generation">Génération actuelle : </label>
+	<br><br>
+	<label>Vitesse : </label>
+	<br>
+	<input id="slider" type="range" min="1" max="300" value="50">
+
+	<script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const resolution = 10;
+        const cols = 60;
+        const rows = 60;
+
+        let grid = createGrid();
+        let running = false;
+        let isMouseDown = false;
+        let generation = 0;
+
+        canvas.width = cols * resolution;
+        canvas.height = rows * resolution;
+
+        function createGrid() {
+            return new Array(rows).fill(null)
+                .map(() => new Array(cols).fill(0));
+        }
+
+        function randomizeGrid() {
+            grid = grid.map(row => row.map(() => Math.random() > 0.8 ? 1 : 0));
+            drawGrid();
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            grid.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    ctx.fillStyle = cell ? "black" : "white";
+                    ctx.fillRect(x * resolution, y * resolution, resolution, resolution);
+                    ctx.strokeStyle = "gray";
+                    ctx.strokeRect(x * resolution, y * resolution, resolution, resolution);
+                });
+            });
+        }
+
+        function nextGeneration() {
+            generation += 1;
+            document.getElementById("generation").innerHTML = "Génération actuelle : "+ generation;
+            const newGrid = createGrid();
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const neighbors = getNeighbors(x, y);
+                    if (grid[y][x] && (neighbors === 2 || neighbors === 3)) {
+                        newGrid[y][x] = 1;
+                    } else if (!grid[y][x] && neighbors === 3) {
+                        newGrid[y][x] = 1;
+                    }
+                }
+            }
+            grid = newGrid;
+            drawGrid();
+            if (running) {
+                setTimeout(nextGeneration, 301 - document.getElementById("slider").value);
+            }
+        }
+
+        function getNeighbors(x, y) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const nx = x + j;
+                    const ny = y + i;
+                    if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+                        count += grid[ny][nx];
+                    }
+                }
+            }
+            return count;
+        }
+
+        function startGame() {
+            if (!running) {
+                running = true;
+                nextGeneration();
+            }
+        }
+
+        function stopGame() {
+            running = false;
+        }
+
+        function clearGrid() {
+            generation = 0;
+            document.getElementById("slider").value = 50;
+            document.getElementById("generation").innerHTML = "Génération actuelle : "+ generation;
+            grid = createGrid();
+            drawGrid();
+        }
+
+        canvas.addEventListener("mousedown", () => {
+            isMouseDown = true;
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            isMouseDown = false;
+        });
+
+        canvas.addEventListener("mousemove", (event) => {
+            if(isMouseDown){
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left) / resolution);
+                const y = Math.floor((event.clientY - rect.top) / resolution);
+                grid[y][x] = 1;
+                drawGrid();
+            }
+        });
+
+        canvas.addEventListener("click", (event) =>{
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / resolution);
+            const y = Math.floor((event.clientY - rect.top) / resolution);
+            grid[y][x] = grid[y][x] ? 0 : 1;
+            drawGrid();
+        });
+
+        drawGrid();
+        document.getElementById("generation").innerHTML = "Génération actuelle : "+ generation;
+    </script>
+</body>
+</html>
